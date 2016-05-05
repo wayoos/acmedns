@@ -1,0 +1,13 @@
+# execution artefacts
+*.pyc
+.coverage
+
+# dist artefacts
+build/
+dist/
+
+# documentation artefacts
+docs/_build
+
+# Intellij
+*.iml
