@@ -20,10 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from adapter.adapter import Adapter
+from acmedns.adapter.adapter import Adapter
 
 
-class MyEffable(Adapter):
+class OvhAdapter(Adapter):
 
-    def __str__(self):
-        return 'expressable!'
+    def __init__(self):
+        self.endpoint = None
+        self.application_key = None
+        self.application_secret = None
+        self.consumer_key = None
+
+    def setup(self, params):
+        self.endpoint = params['endpoint']
+        self.application_key = params['application_key']
+        self.application_secret = params['application_secret']
+        self.consumer_key = params['consumer_key']
+
+    def str(self):
+        return 'ovh'

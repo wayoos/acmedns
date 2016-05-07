@@ -28,6 +28,8 @@ except ImportError:  # pragma: no cover
     # Python 3
     from configparser import RawConfigParser, NoSectionError, NoOptionError
 
+import acmedns
+
 """
 
 .. code:: ini
@@ -51,6 +53,7 @@ CONFIG_PATH = [
     os.path.realpath('./acmedns.conf'),
 ]
 
+
 class ConfigurationManager(object):
     '''
     Application wide configuration manager
@@ -62,12 +65,41 @@ class ConfigurationManager(object):
         # create config parser
         self.config = RawConfigParser()
         self.config.read(config)
+        self.certs_path = self.__get('default', 'certs_path')
 
     @classmethod
-    def fromfilename(cls, name):
+    def from_filename(cls, name):
         return cls([name])
 
-    def get(self, section, name):
+    @staticmethod
+    def __import_class_from_string(path):
+        from importlib import import_module
+        module_path, _, class_name = path.rpartition('.')
+        mod = import_module(module_path)
+        klass = getattr(mod, class_name)
+        return klass
+
+    def get_config(self):
+        acme_url = self.__get('client', 'acme_url')
+        account_key = self.__get('client', 'account_key')
+        config = acmedns.ClientConfig(acme_url, account_key)
+        return config
+
+    def get_adapter(self):
+        adapter_class_name = self.__get('adapter', 'class_name')
+        adapter_config = dict(self.config.items('adapter'))
+        adapter = ConfigurationManager.__import_class_from_string(adapter_class_name)()
+        adapter.setup(adapter_config)
+        return adapter
+
+    def get_domains(self):
+        domain_items = self.config.items('domain')
+        domains = []
+        for k, v in domain_items:
+            domains.append(v)
+        return domains
+
+    def __get(self, section, name):
         '''
         Load parameter ``name`` from configuration, respecting priority order.
         Most of the time, ``section`` will correspond to the current api

@@ -27,5 +27,10 @@ class Adapter(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def __str__(self):
+    def setup(self, params):
+        raise NotImplementedError('users must define __str__ to use this base class')
+
+
+    @abc.abstractmethod
+    def str(self):
         raise NotImplementedError('users must define __str__ to use this base class')

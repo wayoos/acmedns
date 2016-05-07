@@ -21,11 +21,18 @@
 # SOFTWARE.
 
 
+class ClientConfig(object):
+
+    def __init__(self, acme_url, account_key):
+        self.acme_url = acme_url
+        self.account_key = account_key
+
+
 class Client:
 
-    def __init__(self, url, adapter):
-        self.url = url
+    def __init__(self, config, adapter):
+        self.config = config
         self.adapter = adapter
 
-    def test(self):
+    def sign(self, csr_file):
         self.adapter.__str__

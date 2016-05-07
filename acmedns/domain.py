@@ -20,29 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import unittest
-import os
-from acmedns.config import ConfigurationManager
-from acmedns.adapter.ovh import OvhAdapter
-
-TEST_CONFIG_FILENAME = os.path.join(os.path.dirname(__file__), 'acmedns_test.conf')
+from client import Client
 
 
-class BasicTestSuite(unittest.TestCase):
+class DomainManager:
 
-    def test_config(self):
-        config_mng = ConfigurationManager.from_filename(TEST_CONFIG_FILENAME)
-        self.assertEqual(config_mng.certs_path, '/etc/certs')
+    def __init__(self, config, adapter, domains):
+        self.config = config
+        self.adapter = adapter
+        self.domains = domains
 
-        config = config_mng.get_config()
-        self.assertEqual(config.acme_url, 'https://acme-v01.api.letsencrypt.org')
-        self.assertEqual(config.account_key, '/etc/account.key')
+    @classmethod
+    def from_config(cls, config_mngt):
+        return cls(config_mngt.get_config, config_mngt.get_adapter, config_mngt.get_domains)
 
-        adapter = config_mng.get_adapter()
-        self.assertIsInstance(adapter, OvhAdapter)
-
-        domains = config_mng.get_domains()
-        self.assertListEqual(domains, ['example.com/example.com.csr', '/etc/certs/example2.com/example2.com.csr'], "")
-
-if __name__ == '__main__':
-    unittest.main()
+    def sign_all(self):
+        client = Client(self.config, self.adapter)
+        for domain in self.domains:
+            client.sign(domain)

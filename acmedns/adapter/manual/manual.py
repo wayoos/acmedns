@@ -20,27 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-class acmedns:
+from acmedns.adapter.adapter import Adapter
 
 
-def main(argv):
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent("""\
-            This script automates the process of getting a signed TLS certificate from
-            Let's Encrypt using the ACME protocol. It will need to be run on your server
-            and have access to your private account key.
+class ManualAdapter(Adapter):
 
-            ===Example Usage===
-            python acmedns.py --config acmedns.conf
-            ===================
-
-            """)
-    )
-    parser.add_argument("--account-key", required=True, help="path to your Let's Encrypt account private key")
-    parser.add_argument("--csr", required=True, help="path to your certificate signing request")
-    parser.add_argument("--quiet", action="store_const", const=logging.ERROR, help="suppress output except for errors")
-    parser.add_argument("--ca", default=DEFAULT_CA, help="certificate authority, default is Let's Encrypt")
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
+    def str(self):
+        return 'manual'

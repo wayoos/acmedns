@@ -1,2 +1,3 @@
-from .config import ConfigurationManager
-from .core import hmm
+#from config import ConfigurationManager
+from client import ClientConfig
+from client import Client
