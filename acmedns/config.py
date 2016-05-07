@@ -64,7 +64,8 @@ class ConfigurationManager(object):
         '''
         # create config parser
         self.config = RawConfigParser()
-        self.config.read(config)
+        config_files = self.config.read(config)
+        self.config_dir = os.path.dirname(os.path.abspath(config_files[0]))
         self.certs_path = self.__get('default', 'certs_path')
 
     @classmethod
@@ -81,7 +82,7 @@ class ConfigurationManager(object):
 
     def get_config(self):
         acme_url = self.__get('client', 'acme_url')
-        account_key = self.__get('client', 'account_key')
+        account_key = self.__get_file(self.__get('client', 'account_key'))
         config = acmedns.ClientConfig(acme_url, account_key)
         return config
 
@@ -96,8 +97,20 @@ class ConfigurationManager(object):
         domain_items = self.config.items('domain')
         domains = []
         for k, v in domain_items:
-            domains.append(v)
+            domains.append(self.__get_file(v))
         return domains
+
+    def __get_file(self, filename):
+        if os.path.isfile(filename):
+            return filename
+        if self.certs_path is not None:
+            with_certs_path = os.path.join(self.certs_path, filename)
+            if os.path.isfile(with_certs_path):
+                return with_certs_path
+        with_config_dir = os.path.join(self.config_dir, filename)
+        if os.path.isfile(with_config_dir):
+            return with_config_dir
+        raise IOError("File not found: {0}".format(filename))
 
     def __get(self, section, name):
         '''

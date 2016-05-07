@@ -32,7 +32,7 @@ class DomainManager:
 
     @classmethod
     def from_config(cls, config_mngt):
-        return cls(config_mngt.get_config, config_mngt.get_adapter, config_mngt.get_domains)
+        return cls(config_mngt.get_config(), config_mngt.get_adapter(), config_mngt.get_domains())
 
     def sign_all(self):
         client = Client(self.config, self.adapter)
