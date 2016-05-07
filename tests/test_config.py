@@ -36,13 +36,13 @@ class BasicTestSuite(unittest.TestCase):
 
         config = config_mng.get_config()
         self.assertEqual(config.acme_url, 'https://acme-v01.api.letsencrypt.org')
-        self.assertEqual(config.account_key, '/etc/account.key')
+        self.assertEqual(config.account_key, 'account.key')
 
         adapter = config_mng.get_adapter()
         self.assertIsInstance(adapter, OvhAdapter)
 
         domains = config_mng.get_domains()
-        self.assertListEqual(domains, ['example.com/example.com.csr', '/etc/certs/example2.com/example2.com.csr'], "")
+        self.assertListEqual(domains, ['example.com/example.com.csr', 'example2.com/example2.com.csr'], "")
 
 if __name__ == '__main__':
     unittest.main()

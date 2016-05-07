@@ -28,9 +28,12 @@ class Adapter(object):
 
     @abc.abstractmethod
     def setup(self, params):
-        raise NotImplementedError('users must define __str__ to use this base class')
-
+        raise NotImplementedError('users must define setup to use this base class')
 
     @abc.abstractmethod
-    def str(self):
-        raise NotImplementedError('users must define __str__ to use this base class')
+    def deploy_challenge(self, domain, token):
+        raise NotImplementedError('users must define deploy_challenge to use this base class')
+
+    @abc.abstractmethod
+    def delete_challenge(self, record):
+        raise NotImplementedError('users must define delete_challenge to use this base class')

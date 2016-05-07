@@ -36,5 +36,6 @@ class DomainManager:
 
     def sign_all(self):
         client = Client(self.config, self.adapter)
+        client.reg_account()
         for domain in self.domains:
             client.sign(domain)

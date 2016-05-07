@@ -1,1 +1,0 @@
-from ovh import OvhAdapter

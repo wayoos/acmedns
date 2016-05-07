@@ -20,7 +20,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from acmedns.adapter.adapter import Adapter
+import logging
+import ovh
+from adapter import Adapter
+
+log = logging.getLogger(__name__)
 
 
 class OvhAdapter(Adapter):
@@ -30,12 +34,33 @@ class OvhAdapter(Adapter):
         self.application_key = None
         self.application_secret = None
         self.consumer_key = None
+        self.client = None
 
     def setup(self, params):
         self.endpoint = params['endpoint']
         self.application_key = params['application_key']
         self.application_secret = params['application_secret']
         self.consumer_key = params['consumer_key']
+        self.client = ovh.Client(self.endpoint, self.application_key, self.application_secret, self.consumer_key)
 
-    def str(self):
-        return 'ovh'
+    def deploy_challenge(self, domain, tokenin):
+        token = "\"" + tokenin + "\""
+        ndd = domain.split(".")
+        if len(ndd) == 2:
+            subdomain = "_acme-challenge"
+            basedomain = ndd[0] + "." + ndd[1]
+        else:
+            subdomain = "_acme-challenge." + ndd[0]
+            basedomain = ndd[1] + "." + ndd[2]
+        log.info("Deploy TXT domain: {0} subdomain: {1}".format(basedomain, subdomain))
+        record = self.client.post('/domain/zone/%s/record' % basedomain, fieldType="TXT", subDomain=subdomain, ttl=60,
+                                  target=token)
+        log.info("Deploy record id: {0}".format(record))
+
+        self.client.post('/domain/zone/%s/refresh' % basedomain)
+
+        return record
+
+    def delete_challenge(self, record):
+        self.client.delete('/domain/zone/%s/record/%s' % (record['zone'], record['id']))
+        self.client.post('/domain/zone/%s/refresh' % record['zone'])
