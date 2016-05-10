@@ -20,17 +20,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import mock
 import unittest
 import os
 from acmedns.config import ConfigurationManager
-from acmedns.adapter.ovh import OvhAdapter
+from acmedns.adapter.ovh_adapter import OvhAdapter
 
 TEST_CONFIG_FILENAME = os.path.join(os.path.dirname(__file__), 'acmedns_test.conf')
 
 
 class BasicTestSuite(unittest.TestCase):
 
-    def test_config(self):
+    @mock.patch('acmedns.config.os.path')
+    def test_config(self, mock_path):
+
+        mock_path.isfile.return_value = True
+
         config_mng = ConfigurationManager.from_filename(TEST_CONFIG_FILENAME)
         self.assertEqual(config_mng.certs_path, '/etc/certs')
 

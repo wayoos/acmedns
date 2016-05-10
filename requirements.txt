@@ -1,2 +1,5 @@
 nose
 sphinx
+mock
+ovh
+dnspython
