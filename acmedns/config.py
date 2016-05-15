@@ -84,7 +84,8 @@ class ConfigurationManager(object):
         acme_url = self.__get('client', 'acme_url')
         account_key = self.__get_file(self.__get('client', 'account_key'))
         contact_email = self.__get('client', 'contact_email')
-        config = acmedns.ClientConfig(acme_url, account_key, contact_email)
+        checkend = self.__get('client', 'checkend', '86400')
+        config = acmedns.ClientConfig(acme_url, account_key, contact_email, checkend)
         return config
 
     def get_adapter(self):
@@ -113,7 +114,7 @@ class ConfigurationManager(object):
             return with_config_dir
         raise IOError("File not found: {0}".format(filename))
 
-    def __get(self, section, name):
+    def __get(self, section, name, default=None):
         '''
         Load parameter ``name`` from configuration, respecting priority order.
         Most of the time, ``section`` will correspond to the current api
@@ -136,4 +137,4 @@ class ConfigurationManager(object):
             pass
 
         # not found, sorry
-        return None
+        return default

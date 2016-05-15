@@ -33,6 +33,7 @@ import dns.exception
 import time
 import textwrap
 import sys
+import os
 try:
     from urllib.request import urlopen  # Python 3
 except ImportError:
@@ -43,10 +44,11 @@ log = logging.getLogger(__name__)
 
 class ClientConfig(object):
 
-    def __init__(self, acme_url, account_key, contact_email):
+    def __init__(self, acme_url, account_key, contact_email, checkend):
         self.acme_url = acme_url
         self.account_key = account_key
         self.contact_email = contact_email
+        self.checkend = checkend
 
 
 class Client:
@@ -144,6 +146,22 @@ class Client:
         return False
 
     def sign(self, csr_file):
+        sign_cert_file_name = csr_file.rsplit(".", 1)[0]
+        sign_cert_file_name += '.crt'
+        sign_cert_file_name = os.path.abspath(sign_cert_file_name)
+        log.debug("Sign cert file name: %s", sign_cert_file_name)
+
+        if os.path.isfile(sign_cert_file_name):
+            # check if certificat is valid
+            proc = subprocess.Popen(["openssl", "x509", "-checkend", self.config.checkend, "-in", sign_cert_file_name, "-noout"],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = proc.communicate()
+            if proc.returncode == 0:
+                log.info("Certificat is valid for next {0}s : {1}".format(self.config.checkend, sign_cert_file_name))
+                return
+
+        return
+
         # find domains
         log.info("Parsing CSR %s", csr_file)
         proc = subprocess.Popen(["openssl", "req", "-in", csr_file, "-noout", "-text"],
@@ -188,39 +206,39 @@ class Client:
                 basedomain = ndd[1] + "." + ndd[2]
 
             record = self.adapter.deploy_challenge(basedomain, subdomain, dnstoken)
+            try:
+                is_deployed = Client.wait_challenge_deployed(domain)
 
-            is_deployed = Client.wait_challenge_deployed(domain)
+                if is_deployed:
 
-            if is_deployed:
+                    # notify challenge are met
+                    code, result = self.__send_signed_request(challenge['uri'], {
+                        "resource": "challenge",
+                        "keyAuthorization": keyauthorization,
+                    })
+                    if code != 202:
+                        raise ValueError("Error triggering challenge: {0} {1}".format(code, result))
 
-                # notify challenge are met
-                code, result = self.__send_signed_request(challenge['uri'], {
-                    "resource": "challenge",
-                    "keyAuthorization": keyauthorization,
-                })
-                if code != 202:
-                    raise ValueError("Error triggering challenge: {0} {1}".format(code, result))
-
-                # wait for challenge to be verified
-                while True:
-                    try:
-                        resp = urlopen(challenge['uri'])
-                        challenge_status = json.loads(resp.read().decode('utf8'))
-                        log.info(challenge_status)
-                    except IOError as e:
-                        raise ValueError("Error checking challenge: {0} {1}".format(
-                            e.code, json.loads(e.read().decode('utf8'))))
-                    if challenge_status['status'] == "pending":
-                        log.info("Pending")
-                        time.sleep(1)
-                    elif challenge_status['status'] == "valid":
-                        log.info("{0} verified!".format(domain))
-                        break
-                    else:
-                        raise ValueError("{0} challenge did not pass: {1}".format(
-                            domain, challenge_status))
-
-            self.adapter.delete_challenge(record)
+                    # wait for challenge to be verified
+                    while True:
+                        try:
+                            resp = urlopen(challenge['uri'])
+                            challenge_status = json.loads(resp.read().decode('utf8'))
+                            log.debug(challenge_status)
+                        except IOError as e:
+                            raise ValueError("Error checking challenge: {0} {1}".format(
+                                e.code, json.loads(e.read().decode('utf8'))))
+                        if challenge_status['status'] == "pending":
+                            log.debug("Pending")
+                            time.sleep(1)
+                        elif challenge_status['status'] == "valid":
+                            log.debug("{0} verified!".format(domain))
+                            break
+                        else:
+                            raise ValueError("{0} challenge did not pass: {1}".format(
+                                domain, challenge_status))
+            finally:
+                self.adapter.delete_challenge(record)
 
         # get the new certificate
         log.info("Signing certificate...")
@@ -237,7 +255,6 @@ class Client:
         sign_cert = """-----BEGIN CERTIFICATE-----\n{0}\n-----END CERTIFICATE-----\n""".format(
             "\n".join(textwrap.wrap(base64.b64encode(result).decode('utf8'), 64)))
 
-        sign_cert_file_name = csr_file+'.crt'
         sign_cert_file = open(sign_cert_file_name, 'w')
         sign_cert_file.write(sign_cert)
         sign_cert_file.close()
