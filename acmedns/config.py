@@ -83,7 +83,8 @@ class ConfigurationManager(object):
     def get_config(self):
         acme_url = self.__get('client', 'acme_url')
         account_key = self.__get_file(self.__get('client', 'account_key'))
-        config = acmedns.ClientConfig(acme_url, account_key)
+        contact_email = self.__get('client', 'contact_email')
+        config = acmedns.ClientConfig(acme_url, account_key, contact_email)
         return config
 
     def get_adapter(self):

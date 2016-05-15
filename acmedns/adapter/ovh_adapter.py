@@ -43,19 +43,12 @@ class OvhAdapter(Adapter):
         self.consumer_key = params['consumer_key']
         self.client = ovh.Client(self.endpoint, self.application_key, self.application_secret, self.consumer_key)
 
-    def deploy_challenge(self, domain, tokenin):
+    def deploy_challenge(self, basedomain, subdomain, tokenin):
         token = "\"" + tokenin + "\""
-        ndd = domain.split(".")
-        if len(ndd) == 2:
-            subdomain = "_acme-challenge"
-            basedomain = ndd[0] + "." + ndd[1]
-        else:
-            subdomain = "_acme-challenge." + ndd[0]
-            basedomain = ndd[1] + "." + ndd[2]
-        log.info("Deploy TXT domain: {0} subdomain: {1}".format(basedomain, subdomain))
+        log.info("Deploy challenge in TXT domain: {0} subdomain: {1}".format(basedomain, subdomain))
         record = self.client.post('/domain/zone/%s/record' % basedomain, fieldType="TXT", subDomain=subdomain, ttl=60,
                                   target=token)
-        log.info("Deploy record id: {0}".format(record))
+        log.debug("Deploy record id: {0}".format(record))
 
         self.client.post('/domain/zone/%s/refresh' % basedomain)
 

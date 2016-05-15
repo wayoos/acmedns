@@ -31,7 +31,7 @@ class Adapter(object):
         raise NotImplementedError('users must define setup to use this base class')
 
     @abc.abstractmethod
-    def deploy_challenge(self, domain, token):
+    def deploy_challenge(self, basedomain, subdomain, token):
         raise NotImplementedError('users must define deploy_challenge to use this base class')
 
     @abc.abstractmethod

@@ -29,6 +29,7 @@ import json
 import hashlib
 import copy
 import dns.resolver
+import dns.exception
 import time
 import textwrap
 import sys
@@ -42,9 +43,10 @@ log = logging.getLogger(__name__)
 
 class ClientConfig(object):
 
-    def __init__(self, acme_url, account_key):
+    def __init__(self, acme_url, account_key, contact_email):
         self.acme_url = acme_url
         self.account_key = account_key
+        self.contact_email = contact_email
 
 
 class Client:
@@ -108,7 +110,7 @@ class Client:
         log.info("Registering account...")
         code, result = self.__send_signed_request(self.config.acme_url + "/acme/new-reg", {
             "resource": "new-reg",
-            "contact": ["mailto:staff@wayoos.com"],
+            "contact": ["mailto:"+self.config.contact_email],
             "agreement": "https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf",
         })
         if code == 201:
@@ -132,13 +134,14 @@ class Client:
     def check_domain(domain):
         try:
             answers = dns.resolver.query('_acme-challenge.{0}'.format(domain), 'TXT')
-
-            for rdata in answers:
+            if len(answers) > 0:
                 return True
+        except dns.exception.DNSException as e:
+            log.debug("TXT not found: %s", e)
         except:
-            print "Unexpected error:", sys.exc_info()[0]
-
-            return False
+            log.error("Unexpected error: %s", sys.exc_info()[0])
+            raise
+        return False
 
     def sign(self, csr_file):
         # find domains
@@ -167,7 +170,7 @@ class Client:
                 "resource": "new-authz",
                 "identifier": {"type": "dns", "value": domain},
             })
-            log.info("Requesting challenges: {0} {1}".format(code, result))
+            log.debug("Requesting challenges: {0} {1}".format(code, result))
             if code != 201:
                 raise ValueError("Error requesting challenges: {0} {1}".format(code, result))
 
@@ -176,7 +179,15 @@ class Client:
             keyauthorization = "{0}.{1}".format(token, self.thumbprint)
             dnstoken = self.__b64(hashlib.sha256(keyauthorization).digest())
 
-            record = self.adapter.deploy_challenge(domain, dnstoken)
+            ndd = domain.split(".")
+            if len(ndd) == 2:
+                subdomain = "_acme-challenge"
+                basedomain = ndd[0] + "." + ndd[1]
+            else:
+                subdomain = "_acme-challenge." + ndd[0]
+                basedomain = ndd[1] + "." + ndd[2]
+
+            record = self.adapter.deploy_challenge(basedomain, subdomain, dnstoken)
 
             is_deployed = Client.wait_challenge_deployed(domain)
 
@@ -223,12 +234,11 @@ class Client:
         if code != 201:
             raise ValueError("Error signing certificate: {0} {1}".format(code, result))
 
-        # return signed certificate!
-        log.info("Certificate signed!")
-
         sign_cert = """-----BEGIN CERTIFICATE-----\n{0}\n-----END CERTIFICATE-----\n""".format(
             "\n".join(textwrap.wrap(base64.b64encode(result).decode('utf8'), 64)))
 
-        sign_cert_file = open(csr_file+'.crt', 'w')
+        sign_cert_file_name = csr_file+'.crt'
+        sign_cert_file = open(sign_cert_file_name, 'w')
         sign_cert_file.write(sign_cert)
         sign_cert_file.close()
+        log.info("Certificate signed %s", sign_cert_file_name)

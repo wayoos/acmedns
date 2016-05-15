@@ -25,5 +25,14 @@ from acmedns.adapter.adapter import Adapter
 
 class ManualAdapter(Adapter):
 
-    def str(self):
-        return 'manual'
+    def setup(self, params):
+        pass
+
+    def deploy_challenge(self, basedomain, subdomain, tokenin):
+        print "Deploy challenge in TXT domain: {0} subdomain: {1} value: {2}".format(basedomain, subdomain, tokenin)
+        raw_input("and press Enter to continue...")
+        return subdomain
+
+    def delete_challenge(self, record):
+        print "Please remove TXT entry %s" % record
+        raw_input("and press Enter to continue...")
