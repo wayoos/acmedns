@@ -160,8 +160,6 @@ class Client:
                 log.info("Certificat is valid for next {0}s : {1}".format(self.config.checkend, sign_cert_file_name))
                 return
 
-        return
-
         # find domains
         log.info("Parsing CSR %s", csr_file)
         proc = subprocess.Popen(["openssl", "req", "-in", csr_file, "-noout", "-text"],
