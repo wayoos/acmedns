@@ -1,5 +1,7 @@
 FROM python:2.7.11-alpine
 
+RUN apk add --no-cache openssl ca-certificates
+
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
