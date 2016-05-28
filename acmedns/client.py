@@ -34,6 +34,7 @@ import time
 import textwrap
 import sys
 import os
+import shutil
 try:
     from urllib.request import urlopen  # Python 3
 except ImportError:
@@ -109,16 +110,16 @@ class Client:
             return getattr(e, "code", None), getattr(e, "read", e.__str__)()
 
     def reg_account(self):
-        log.info("Registering account...")
+        log.debug("Registering account...")
         code, result = self.__send_signed_request(self.config.acme_url + "/acme/new-reg", {
             "resource": "new-reg",
             "contact": ["mailto:"+self.config.contact_email],
             "agreement": "https://letsencrypt.org/documents/LE-SA-v1.0.1-July-27-2015.pdf",
         })
         if code == 201:
-            log.info("Registered!")
+            log.info("Account registered!")
         elif code == 409:
-            log.info("Already registered!")
+            log.debug("Already registered!")
         else:
             raise ValueError("Error registering: {0} {1}".format(code, result))
 
@@ -151,13 +152,19 @@ class Client:
         sign_cert_file_name = os.path.abspath(sign_cert_file_name)
         log.debug("Sign cert file name: %s", sign_cert_file_name)
 
+        full_cert_file_name = csr_file.rsplit(".", 1)[0]
+        full_cert_file_name += '.chained.pem'
+        full_cert_file_name = os.path.abspath(full_cert_file_name)
+        log.debug("Sign chain cert file name: %s", full_cert_file_name)
+
         if os.path.isfile(sign_cert_file_name):
-            # check if certificat is valid
-            proc = subprocess.Popen(["openssl", "x509", "-checkend", self.config.checkend, "-in", sign_cert_file_name, "-noout"],
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # check if certificate is valid
+            proc = subprocess.Popen(["openssl", "x509", "-checkend", self.config.checkend, "-in",
+                                     sign_cert_file_name, "-noout"],
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = proc.communicate()
             if proc.returncode == 0:
-                log.info("Certificat is valid for next {0}s : {1}".format(self.config.checkend, sign_cert_file_name))
+                log.info("Certificate is valid for next {0}s : {1}".format(self.config.checkend, sign_cert_file_name))
                 return
 
         # find domains
@@ -257,3 +264,12 @@ class Client:
         sign_cert_file.write(sign_cert)
         sign_cert_file.close()
         log.info("Certificate signed %s", sign_cert_file_name)
+
+        shutil.copy(sign_cert_file_name, full_cert_file_name)
+
+        # Download intermediate cert
+        chain_cert = urlopen("https://letsencrypt.org/certs/lets-encrypt-x3-cross-signed.pem")
+        with open(full_cert_file_name, 'ab') as output:
+            output.write(chain_cert.read())
+
+        log.info("Certificate chain signed %s", full_cert_file_name)
