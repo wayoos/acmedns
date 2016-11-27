@@ -127,7 +127,7 @@ class Client:
     def wait_challenge_deployed(domain):
         count = 0
         is_deployed = Client.check_domain(domain)
-        while count < 50 and not is_deployed:
+        while count < 240 and not is_deployed:
             time.sleep(10)
             count += 1
             is_deployed = Client.check_domain(domain)
